@@ -6,9 +6,13 @@ public static class FocusClockNative {
  [DllImport("user32.dll")] public static extern bool GetLastInputInfo(ref LASTINPUTINFO p);
  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint id);
+ [DllImport("user32.dll", SetLastError=true)] public static extern IntPtr OpenInputDesktop(uint flags, bool inherit, uint access);
+ [DllImport("user32.dll", SetLastError=true)] public static extern bool CloseDesktop(IntPtr desktop);
+ [DllImport("user32.dll", SetLastError=true)] public static extern bool GetUserObjectInformation(IntPtr hObj, int index, System.Text.StringBuilder info, int length, out int needed);
  [StructLayout(LayoutKind.Sequential)] public struct LASTINPUTINFO { public uint cbSize; public uint dwTime; }
  public static uint IdleSeconds() { LASTINPUTINFO i = new LASTINPUTINFO(); i.cbSize=(uint)Marshal.SizeOf(i); GetLastInputInfo(ref i); return ((uint)Environment.TickCount-i.dwTime)/1000; }
  public static string ForegroundProcess() { uint id; GetWindowThreadProcessId(GetForegroundWindow(),out id); try { return System.Diagnostics.Process.GetProcessById((int)id).ProcessName; } catch { return "Unknown"; } }
+ public static bool IsWorkstationLocked() { IntPtr desk = OpenInputDesktop(0, false, 0x0001); if (desk == IntPtr.Zero) return true; try { System.Text.StringBuilder name = new System.Text.StringBuilder(256); int needed; return !GetUserObjectInformation(desk, 2, name, name.Capacity, out needed) || !string.Equals(name.ToString(), "Default", StringComparison.OrdinalIgnoreCase); } finally { CloseDesktop(desk); } }
 }
 '@
 
@@ -96,7 +100,7 @@ function Open-OutlookReport($test=$false) {
  } catch { [System.Windows.MessageBox]::Show($_.Exception.Message,'Focus Clock') | Out-Null; return $false }
 }
 
-$tick=New-Object Windows.Threading.DispatcherTimer; $tick.Interval=[TimeSpan]::FromSeconds(1); $tick.Add_Tick({$now=Get-Date;$elapsed=($now-$script:lastTick).TotalSeconds;$script:lastTick=$now;if($script:data.enabled -and !$script:locked -and [FocusClockNative]::IdleSeconds() -le ([int]$script:data.idleMinutes*60)){$script:data.totalSeconds += [math]::Min($elapsed,2);if($script:data.trackApps){$name=[FocusClockNative]::ForegroundProcess();if($null -eq $script:data.apps.$name){$script:data.apps|Add-Member -NotePropertyName $name -NotePropertyValue 0};$script:data.apps.$name += [math]::Min($elapsed,2)}};if((Get-Date).ToString('HH:mm') -eq $script:data.reportTime -and $script:data.lastReport -ne $script:data.day){if(Open-OutlookReport){$script:data.lastReport=$script:data.day}};Save-Data;Refresh-Ui});$tick.Start()
+$tick=New-Object Windows.Threading.DispatcherTimer; $tick.Interval=[TimeSpan]::FromSeconds(1); $tick.Add_Tick({$now=Get-Date;$elapsed=($now-$script:lastTick).TotalSeconds;$script:lastTick=$now;$isLocked=[FocusClockNative]::IsWorkstationLocked();if($script:data.enabled -and !$isLocked -and [FocusClockNative]::IdleSeconds() -le ([int]$script:data.idleMinutes*60)){$script:data.totalSeconds += [math]::Min($elapsed,2);if($script:data.trackApps){$name=[FocusClockNative]::ForegroundProcess();if($null -eq $script:data.apps.$name){$script:data.apps|Add-Member -NotePropertyName $name -NotePropertyValue 0};$script:data.apps.$name += [math]::Min($elapsed,2)}};if((Get-Date).ToString('HH:mm') -eq $script:data.reportTime -and $script:data.lastReport -ne $script:data.day){if(Open-OutlookReport){$script:data.lastReport=$script:data.day}};Save-Data;Refresh-Ui});$tick.Start()
 $notify=New-Object System.Windows.Forms.NotifyIcon;$notify.Icon=[System.Drawing.SystemIcons]::Information;$notify.Text='Focus Clock';$notify.Visible=$true;$menu=New-Object System.Windows.Forms.ContextMenuStrip;$show=$menu.Items.Add('Show Focus Clock');$show.Add_Click({$window.Show();$window.Activate()});$quit=$menu.Items.Add('Quit');$quit.Add_Click({$notify.Visible=$false;$window.Close()});$notify.ContextMenuStrip=$menu
 Register-ObjectEvent ([Microsoft.Win32.SystemEvents]) SessionSwitch -SourceIdentifier FocusClockSession -Action { if($EventArgs.Reason -in @([Microsoft.Win32.SessionSwitchReason]::SessionLock,[Microsoft.Win32.SessionSwitchReason]::RemoteDisconnect)){$script:locked=$true}else{$script:locked=$false;$script:lastTick=Get-Date} } | Out-Null
 $window.Add_Closing({$notify.Visible=$false;Save-Data;Unregister-Event -SourceIdentifier FocusClockSession -ErrorAction SilentlyContinue})
