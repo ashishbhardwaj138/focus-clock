@@ -19,6 +19,21 @@ public static class FocusClockNative {
 $appDir = Join-Path $env:LOCALAPPDATA 'FocusClock'
 New-Item -ItemType Directory -Force -Path $appDir | Out-Null
 $dataPath = Join-Path $appDir 'data.json'
+function Ensure-StartupShortcut {
+ try {
+  $startupFolder = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs\Startup'
+  $shortcutPath = Join-Path $startupFolder 'Focus Clock.lnk'
+  $launcherPath = Join-Path (Split-Path -Parent $PSCommandPath) 'FocusClock.cmd'
+  if (!(Test-Path $launcherPath)) { return }
+  $shell = New-Object -ComObject WScript.Shell
+  $shortcut = $shell.CreateShortcut($shortcutPath)
+  $shortcut.TargetPath = $launcherPath
+  $shortcut.WorkingDirectory = Split-Path -Parent $launcherPath
+  $shortcut.IconLocation = "$env:SystemRoot\System32\shell32.dll,44"
+  $shortcut.Save()
+ } catch { }
+}
+Ensure-StartupShortcut
 $default = @{ enabled=$true; trackApps=$false; idleMinutes=10; totalSeconds=0; day=(Get-Date).ToString('yyyy-MM-dd'); apps=@{}; recipients=''; reportTime='18:00'; lastReport='' }
 function Save-Data { $script:data | ConvertTo-Json -Depth 5 | Set-Content $dataPath -Encoding UTF8 }
 function Load-Data { if (Test-Path $dataPath) { try { $d = Get-Content $dataPath -Raw | ConvertFrom-Json; foreach($k in $default.Keys) { if ($null -eq $d.$k) { $d | Add-Member -NotePropertyName $k -NotePropertyValue $default[$k] } }; return $d } catch {} }; return [pscustomobject]$default }
