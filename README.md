@@ -41,7 +41,7 @@ The main dashboard gives you everything you need:
 
 `FocusClock.cmd` starts the matching `FocusClock.ps1` in the same folder with a process-only PowerShell policy bypass. It does not change system security settings or bypass an organization-enforced PowerShell Group Policy.
 
-For automatic startup, create a Windows shortcut to `FocusClock.cmd` in your Startup folder.
+On its first run, Focus Clock automatically creates a per-user Startup shortcut. It launches again after the next Windows sign-in, without administrator access.
 
 ## How tracking works
 
@@ -50,6 +50,8 @@ Focus Clock counts time only while all of these are true:
 1. Tracking is enabled.
 2. The Windows session is unlocked.
 3. Keyboard or mouse activity has occurred within the configured idle limit (10 minutes by default).
+
+Windows lock, logoff, shutdown, restart, and power loss never add elapsed time. The saved total is restored after the next sign-in, and tracking resumes only after the Windows desktop is unlocked.
 
 Enable **Application tracking** to add foreground application totals to the report. Disable it if you only need one overall work-time figure.
 
