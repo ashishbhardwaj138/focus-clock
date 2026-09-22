@@ -36,11 +36,11 @@ The main dashboard gives you everything you need:
 ## Install in under a minute
 
 1. Download or clone this repository.
-2. Right-click [install.ps1](install.ps1) and select **Run with PowerShell**.
+2. Double-click [Install Focus Clock.cmd](Install%20Focus%20Clock.cmd). It runs the installer with a process-only PowerShell policy bypass.
 3. Open **Focus Clock** from the Start menu.
 4. Use **Configure recipients** and **Schedule reports** to complete setup.
 
-The installer copies the app to `%LOCALAPPDATA%\FocusClock`, adds a Start-menu shortcut, and starts it automatically at sign-in for the current Windows user.
+The installer copies the app to `%LOCALAPPDATA%\FocusClock`, adds a Start-menu shortcut, and starts it automatically at sign-in for the current Windows user. The bypass does not change system security settings or bypass an organization-enforced PowerShell Group Policy.
 
 To remove it, run [uninstall.ps1](uninstall.ps1).
 
