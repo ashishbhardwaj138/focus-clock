@@ -33,16 +33,15 @@ The main dashboard gives you everything you need:
 | Download report | Save the current day's CSV anywhere you choose. |
 | View activity details | Review active time by application. |
 
-## Install in under a minute
+## Run in under a minute
 
 1. Download or clone this repository.
-2. Double-click [Install Focus Clock.cmd](Install%20Focus%20Clock.cmd). It runs the installer with a process-only PowerShell policy bypass.
-3. Open **Focus Clock** from the Start menu.
-4. Use **Configure recipients** and **Schedule reports** to complete setup.
+2. Double-click [FocusClock.cmd](FocusClock.cmd).
+3. Use **Configure recipients** and **Schedule reports** to complete setup.
 
-The installer copies the app to `%LOCALAPPDATA%\FocusClock`, adds a Start-menu shortcut, and starts it automatically at sign-in for the current Windows user. The bypass does not change system security settings or bypass an organization-enforced PowerShell Group Policy.
+`FocusClock.cmd` starts the matching `FocusClock.ps1` in the same folder with a process-only PowerShell policy bypass. It does not change system security settings or bypass an organization-enforced PowerShell Group Policy.
 
-To remove it, run [uninstall.ps1](uninstall.ps1).
+For automatic startup, create a Windows shortcut to `FocusClock.cmd` in your Startup folder.
 
 ## How tracking works
 
