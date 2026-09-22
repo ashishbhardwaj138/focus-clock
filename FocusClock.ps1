@@ -102,7 +102,16 @@ function Open-OutlookReport($test=$false) {
 
 $tick=New-Object Windows.Threading.DispatcherTimer; $tick.Interval=[TimeSpan]::FromSeconds(1); $tick.Add_Tick({$now=Get-Date;$elapsed=($now-$script:lastTick).TotalSeconds;$script:lastTick=$now;$isLocked=[FocusClockNative]::IsWorkstationLocked();if($script:data.enabled -and !$isLocked -and [FocusClockNative]::IdleSeconds() -le ([int]$script:data.idleMinutes*60)){$script:data.totalSeconds += [math]::Min($elapsed,2);if($script:data.trackApps){$name=[FocusClockNative]::ForegroundProcess();if($null -eq $script:data.apps.$name){$script:data.apps|Add-Member -NotePropertyName $name -NotePropertyValue 0};$script:data.apps.$name += [math]::Min($elapsed,2)}};if((Get-Date).ToString('HH:mm') -eq $script:data.reportTime -and $script:data.lastReport -ne $script:data.day){if(Open-OutlookReport){$script:data.lastReport=$script:data.day}};Save-Data;Refresh-Ui});$tick.Start()
 $notify=New-Object System.Windows.Forms.NotifyIcon;$notify.Icon=[System.Drawing.SystemIcons]::Information;$notify.Text='Focus Clock';$notify.Visible=$true;$menu=New-Object System.Windows.Forms.ContextMenuStrip;$show=$menu.Items.Add('Show Focus Clock');$show.Add_Click({$window.Show();$window.Activate()});$quit=$menu.Items.Add('Quit');$quit.Add_Click({$notify.Visible=$false;$window.Close()});$notify.ContextMenuStrip=$menu
-Register-ObjectEvent ([Microsoft.Win32.SystemEvents]) SessionSwitch -SourceIdentifier FocusClockSession -Action { if($EventArgs.Reason -in @([Microsoft.Win32.SessionSwitchReason]::SessionLock,[Microsoft.Win32.SessionSwitchReason]::RemoteDisconnect)){$script:locked=$true}else{$script:locked=$false;$script:lastTick=Get-Date} } | Out-Null
-$window.Add_Closing({$notify.Visible=$false;Save-Data;Unregister-Event -SourceIdentifier FocusClockSession -ErrorAction SilentlyContinue})
+$script:sessionHandler = [Microsoft.Win32.SessionSwitchEventHandler]{
+ param($sender, $eventArgs)
+ if ($eventArgs.Reason -in @([Microsoft.Win32.SessionSwitchReason]::SessionLock, [Microsoft.Win32.SessionSwitchReason]::RemoteDisconnect)) {
+  $script:locked = $true
+ } elseif ($eventArgs.Reason -in @([Microsoft.Win32.SessionSwitchReason]::SessionUnlock, [Microsoft.Win32.SessionSwitchReason]::RemoteConnect)) {
+  $script:locked = $false
+  $script:lastTick = Get-Date
+ }
+}
+[Microsoft.Win32.SystemEvents]::add_SessionSwitch($script:sessionHandler)
+$window.Add_Closing({$notify.Visible=$false;Save-Data;[Microsoft.Win32.SystemEvents]::remove_SessionSwitch($script:sessionHandler)})
 Refresh-Ui;$window.ShowDialog()|Out-Null
 
